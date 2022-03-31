@@ -547,3 +547,103 @@ public static Map oagisMessageHandler(DispatchContext ctx, Map context) {
 </request-map>
 ```
 
+## 四、Control Servlet
+
+该控制器利用了几种 J2EE 表示层设计模式。上下文安全过滤器仿照装饰过滤器模式。 CSF 在上下文根中运行，能够限制对 JSP 模板的直接访问以及为将来的服务（例如调试、日志记录和压缩）打开大门。 Control Servlet 是在 Front Controller 模式之后建模的。这个 Servlet 是 Web 应用程序的请求处理开始的地方。它使用处理安全和事件的辅助类，然后分派到定义的视图。视图是 JSP 模板，与复合视图模式中描述的模板非常相似。这些模板使用帮助文件来限制在实际显示页面中找到的逻辑数量。这些帮助文件是执行特定视图组逻辑的 Java 类。此过程基于 View Helper 模式。 
+
+如上所述，Controller 的主要目的是将逻辑与显示分离。 这是通过以下方式完成的：
+
+* 使用过滤器保护 Web 应用程序中的 JSP 模板     
+* 使用 Servlet 管理应用程序流     
+* 使用事件（命令）和视图助手进行表示逻辑  
+
+### 4.1 Context Security Filter（CSF）
+
+/WEB-INF/web.xml 中定义的上下文安全过滤器 (CSF) 用于限制对 Web 应用程序文件的访问。将来它可能用于调试和/或记录请求。这是对应用程序的所有 Web 请求的起点。默认情况下，所有路径都被拒绝，并且只有明确定义的路径才允许直接访问。通过在“允许列表（allow list）”中设置 Servlet 的挂载点，CSF 被设置为允许对控制 Servlet 的所有请求。允许列表定义为名为 allowedPaths 的 init-param。该值是由冒号分隔的单个路径字符串。示例 webapps 允许 '/control:/index.html:/index.jsp:/default.html:/default.jsp:/images' 路径。路径可以是目录名（从 webapp 的根目录开始）或特定文件的路径。
+
+示例：
+
+*  '/images' 将允许直接访问 /images 目录中的所有文件 
+*  “/site-pages/contactus.html”将只允许直接访问 /site-pages 目录中的 contactus.html 文件 
+*  '/site-pages/info/*' 将只允许直接访问子目录 'info' 中的文件 
+
+当对受保护路径发出直接请求时，过滤器将执行以下两项操作之一。一，过滤器可以将用户重定向到 web.xml 中定义的页面。这是通过将 init-param redirectPath 设置为格式正确的 URL 来定义的。二、过滤器会抛出一个服务器错误，这个错误可以由 init-param errorCode 定义。仅当未定义重定向时才会引发错误。如果没有定义 errorCode，过滤器将抛出 404 服务器错误。  
+
+配置示例：
+
+```xml
+<filter> 
+  <filter-name>ContextSecurityFilter</filter-name>
+  <display-name>ContextSecurityFilter</display-name> 
+  <filter-class>org.ofbiz.webapp.control.ContextSecurityFilter</filter-class>    
+  <init-param> 
+    <param-name>allowedPaths</param-name> 
+    <param-value>/control:/index.html:/index.jsp:/default.html:/default.jsp:/images</param-value>    
+  </init-param> 
+  <init-param> 
+    <param-name>errorCode</param-name>    
+    <param-value>403</param-value> 
+  </init-param> 
+</filter>    
+<filter-mapping> 
+  <filter-name>ContextSecurityFilter</filter-name>    
+  <url-pattern>/*</url-pattern> 
+</filter-mapping> 
+
+```
+
+### 4.2 Control Servlet
+
+Control Servlet 是所有请求处理的核心。通过上下文安全过滤器的有效请求在此处开始处理。当收到请求时，Control Servlet 首先为帮助类（helper classes）设置一个环境。此环境包括（但不限于）设置初始会话对象并存储有关初始请求的有用信息以及设置对实体委托者、服务调度程序和安全处理程序的引用以供帮助程序类使用。然后将请求传递给请求处理程序进行处理。请求处理程序处理请求并在完成后返回到 ControlServlet。 
+
+首次加载 Control Servlet 时，它将创建 Web 应用程序使用的对象并将它们存储在应用程序上下文 (ServletContext) 中。可以通过访问上下文中的属性或通过 JSP <useBean> 标记找到这些对象。这些对象包括：Entity Delegator、Security 对象、Service Dispatcher 和 Request Handler。  
+
+
+
+### 4.3 Request Handler
+
+Request Handler 使用 RequestManager 帮助类来收集在 XML 配置文件中定义的请求映射列表。配置文件位于 /WEB-INF/controller.xml 中以用于适当的上下文。该映射由一个请求 URI 和一个可选的 VIEW 名称组成。视图名称也映射到配置文件中。请求 URI 也可以与事件相关联。事件用于处理与 Web 相关的逻辑，方法是通过 Entity Delegator 直接使用 Entity Engine 或调用服务以通过 Service Dispatcher 处理逻辑。 
+
+当通过请求处理程序接收到请求时，首先在请求映射中查找它；如果未找到映射，则返回“未知请求错误”。成功查找后，将调用安全处理程序以验证当前请求是否需要身份验证，以及发出请求的用户是否已正确验证。如果当前用户未通过身份验证，则请求处理程序将请求重定向到正确的登录表单。在成功验证或不需要验证后，请求处理程序会查找请求的已定义事件。如果找到事件，则将请求传递给 EventHandler 进行处理。事件处理完成后，将为此请求查找默认视图，除非 EventHandler 请求特定视图。然后在视图映射中检查视图，并将值传递给定义的 ViewHandler 以进行调度。如果视图类型为 none，则期望事件自己处理响应；如果视图类型是 url，则 RequestHandler 会重定向到指定的 URL，并且不会调用 ViewHandler。  
+
+request handler配置示例
+
+```xml
+ <request-map uri="checkLogin" edit="false">
+    <description>Verify a user is logged in.</description>
+    <security https="false" auth="false"/>
+    <event type="java" path="org.ofbiz.commonapp.security.login.LoginEvents" invoke="checkLogin" />
+    <response name="success" type="view" value="name" />
+    <response name="error" type="view" value="login" />
+  </request-map>
+```
+
+在上述映射中，事件返回码成功将加载名为 name的视图。 如果成功是用请求类型定义的，那么它将 [***] 而不是显示视图，而是调用另一个请求。 这称为请求链。 视图映射定义如下： 
+
+```xml
+  <view-map name="login" page="/login.jsp"/>
+```
+
+### 4.4 Event Handler
+
+event handler在xml配置文件里定义，例如：
+
+```xml
+ <handler name="java" type="request" class="org.ofbiz.webapp.event.JavaEventHandler"/>
+```
+
+与上面的请求映射一样，登录事件是使用 java类型定义的。 事件类型使用处理程序定义映射到事件处理程序。 可以设计自定义事件处理程序，并可以像上面的示例那样实现。
+
+ Java事件通过定位事件的路径（包和类名）来处理； 然后，通过使用反射 API，事件处理程序调用定义的方法。 一个 String 对象返回到请求处理程序，该请求处理程序映射到请求定义的响应元素。 
+
+### 4.5 View Handler
+
+视图处理程序的定义就像事件处理程序一样，除了类型是视图 
+
+```xml
+ <handler name="region" type="view" class="org.ofbiz.webapp.view.RegionViewHandler"/>
+```
+
+视图处理程序处理呈现用户将看到的下一页。 默认视图处理程序通过分派到视图定义中定义的页面来支持标准 html/jsp 页面。 区域和速度等其他视图处理程序使用特殊逻辑将页面呈现给用户。 
+
+通过实现 ViewHandler 接口并在 controller.xml 文件中设置定义，可以轻松创建自定义视图处理程序，如上例所示。  
