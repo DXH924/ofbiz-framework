@@ -1155,3 +1155,4 @@ tasks.startScripts {
  'CLASSPATH=%APP_HOME%\\conf\\;%APP_HOME%\\lib-extra\\*;%APP_HOME%\\lib')
     }
 }
+

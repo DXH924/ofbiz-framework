@@ -235,6 +235,7 @@ public class EntityDataLoadContainer implements Container {
     }
 
     private static Delegator getDelegatorFromProp(Configuration.Property delegatorNameProp) throws ContainerException {
+        Debug.log("delegatorName:{}", delegatorNameProp.value());
         if (delegatorNameProp != null && UtilValidate.isNotEmpty(delegatorNameProp.value())) {
             String delegValue = delegatorNameProp.value();
             Delegator delegator = DelegatorFactory.getDelegator(delegValue);
