@@ -261,3 +261,6 @@ Mysql Version: > 5.6.4 (supports datetime milliseconds)
 
    解决方案：在framework/entity下新建目录lib/jdbc，根据mysql数据库的版本将相应的mysql-connector-java-version.jar放进去。根据mysql的版本，在jdbc-driver字段的值要做相应的修改，默认是“com.mysql.jdbc.Driver”，高版本的要改成“com.mysql.cj.jdbc.Driver”。
 
+2. 若Apache Derby数据库在再次启动ofbiz时报错：Caused by: org.apache.derby.iapi.error.StandardException: Another instance of Derby may have already booted the database %OFBIZ_HOME%\runtime\data\derby\ofbiz.
+   
+   解决方案：打开任务管理器，结束任务“Open JDK Platform binary”
