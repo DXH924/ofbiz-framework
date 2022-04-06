@@ -1,7 +1,128 @@
 # OFBIZ数据源
 * 要从多个数据库中获取数据，那么必然要连接多个数据库，所以必须配置对应的多个datasource。
 * 配置连接数据库在%OFBIZ_HOME%\framework\entity\config\entityengine.xml文件中定义
-* OFBIZ自带的数据库是Apache Derby，是测试系统的数据库，不适合开发用
+## Apache Derby数据库
+* OFBIZ自带的数据库是Apache Derby，是测试系统的数据库，适合开发和测试用，不适合生产环境
+* 在开发时使用Derby数据库
+```xml
+    <delegator name="default" entity-model-reader="main" entity-group-reader="main" entity-eca-reader="main" distributed-cache-clear-enabled="false">
+        <group-map group-name="org.apache.ofbiz" datasource-name="localderby"/>
+        <group-map group-name="org.apache.ofbiz.olap" datasource-name="localderbyolap"/>
+        <group-map group-name="org.apache.ofbiz.tenant" datasource-name="localderbytenant"/>
+    </delegator>
+    <!-- May be used when you create a service that manages many data for massive imports, this for performance reason or to escape functional cases -->
+    <delegator name="default-no-eca" entity-model-reader="main" entity-group-reader="main" entity-eca-reader="main" entity-eca-enabled="false" distributed-cache-clear-enabled="false">
+        <group-map group-name="org.apache.ofbiz" datasource-name="localderby"/>
+        <group-map group-name="org.apache.ofbiz.olap" datasource-name="localderbyolap"/>
+        <group-map group-name="org.apache.ofbiz.tenant" datasource-name="localderbytenant"/>
+    </delegator>
+
+    <!-- Be sure that your default delegator (or the one you use) uses the same datasource for test. You must run "gradlew loadAll" before running "gradlew testIntegration" -->
+    <delegator name="test" entity-model-reader="main" entity-group-reader="main" entity-eca-reader="main">
+        <group-map group-name="org.apache.ofbiz" datasource-name="localderby"/>
+        <group-map group-name="org.apache.ofbiz.olap" datasource-name="localderbyolap"/>
+        <group-map group-name="org.apache.ofbiz.tenant" datasource-name="localderbytenant"/>
+    </delegator>
+
+    <field-type name="derby" loader="fieldfile" location="fieldtypederby.xml"/>
+
+   <datasource name="localderby"
+               helper-class="org.apache.ofbiz.entity.datasource.GenericHelperDAO"
+               schema-name="OFBIZ"
+               field-type-name="derby"
+               check-on-start="true"
+               add-missing-on-start="true"
+               use-pk-constraint-names="false"
+               use-indices-unique="false"
+               alias-view-columns="false"
+               use-order-by-nulls="true"
+               offset-style="fetch">
+   <read-data reader-name="tenant"/>
+   <read-data reader-name="seed"/>
+   <read-data reader-name="seed-initial"/>
+   <read-data reader-name="demo"/>
+   <read-data reader-name="ext"/>
+   <read-data reader-name="ext-test"/>
+   <read-data reader-name="ext-demo"/>
+   <!-- beware use-indices-unique="false" is needed because of Derby bug with null values in a unique index -->
+   <inline-jdbc
+           jdbc-driver="org.apache.derby.jdbc.EmbeddedDriver"
+           jdbc-uri="jdbc:derby:ofbiz;create=true"
+           jdbc-username="ofbiz"
+           jdbc-password-lookup="derby-ofbiz"
+           isolation-level="ReadCommitted"
+           pool-minsize="2"
+           pool-maxsize="250"
+           test-on-borrow="true"
+           pool-jdbc-test-stmt="values 1"
+           soft-min-evictable-idle-time-millis="600000"
+           time-between-eviction-runs-millis="600000"/>
+   <!-- <jndi-jdbc jndi-server-name="localjndi" jndi-name="java:/DerbyDataSource" isolation-level="ReadCommitted"/> -->
+   </datasource>
+   
+   <datasource name="localderbyolap"
+               helper-class="org.apache.ofbiz.entity.datasource.GenericHelperDAO"
+               schema-name="OFBIZ"
+               field-type-name="derby"
+               check-on-start="true"
+               add-missing-on-start="true"
+               use-pk-constraint-names="false"
+               use-indices-unique="false"
+               alias-view-columns="false"
+               use-order-by-nulls="true">
+   <!-- beware use-indices-unique="false" is needed because of Derby bug with null values in a unique index -->
+   <read-data reader-name="tenant"/>
+   <read-data reader-name="seed"/>
+   <read-data reader-name="seed-initial"/>
+   <read-data reader-name="demo"/>
+   <read-data reader-name="ext"/>
+   <read-data reader-name="ext-test"/>
+   <read-data reader-name="ext-demo"/>
+   <inline-jdbc
+           jdbc-driver="org.apache.derby.jdbc.EmbeddedDriver"
+           jdbc-uri="jdbc:derby:ofbizolap;create=true"
+           jdbc-username="ofbiz"
+           jdbc-password-lookup="derby-ofbizolap"
+           isolation-level="ReadCommitted"
+           pool-minsize="2"
+           pool-maxsize="250"
+           time-between-eviction-runs-millis="600000"/>
+   <!-- <jndi-jdbc jndi-server-name="localjndi" jndi-name="java:/DerbyDataSource" isolation-level="ReadCommitted"/> -->
+   </datasource>
+   
+   <datasource name="localderbytenant"
+               helper-class="org.apache.ofbiz.entity.datasource.GenericHelperDAO"
+               schema-name="OFBIZ"
+               field-type-name="derby"
+               check-on-start="true"
+               add-missing-on-start="true"
+               use-pk-constraint-names="false"
+               use-indices-unique="false"
+               alias-view-columns="false"
+               use-order-by-nulls="true">
+   <read-data reader-name="tenant"/>
+   <read-data reader-name="seed"/>
+   <read-data reader-name="seed-initial"/>
+   <read-data reader-name="demo"/>
+   <read-data reader-name="ext"/>
+   <read-data reader-name="ext-test"/>
+   <read-data reader-name="ext-demo"/>
+   <!-- beware use-indices-unique="false" is needed because of Derby bug with null values in a unique index -->
+   <inline-jdbc
+           jdbc-driver="org.apache.derby.jdbc.EmbeddedDriver"
+           jdbc-uri="jdbc:derby:ofbiztenant;create=true"
+           jdbc-username="ofbiz"
+           jdbc-password-lookup="derby-ofbiztenant"
+           isolation-level="ReadCommitted"
+           pool-minsize="2"
+           pool-maxsize="250"
+           time-between-eviction-runs-millis="600000"/>
+   <!-- <jndi-jdbc jndi-server-name="localjndi" jndi-name="java:/DerbyDataSource" isolation-level="ReadCommitted"/> -->
+   </datasource>
+```
+* 数据源在%OFBIZ_HOME%\runtime\data\derby\ofbiz目录下
+
+## MySQL数据库
 * %OFBIZ_HOME%\framework\entity\fieldtype\fieldtypemysql.xml中配置了sql字段和Java类型的映射
 * 如何切换到mysql？
 * 把%OFBIZ_HOME%\framework\entity\config\entityengine.xml中数据库的缺省配置
@@ -33,7 +154,7 @@ Mysql Version: > 5.6.4 (supports datetime milliseconds)
                 helper-class="org.apache.ofbiz.entity.datasource.GenericHelperDAO"
                 field-type-name="mysql"
                 check-on-start="true"
-                add-missing-on-start="true"
+                add-missing-on-start="false"
                 check-pks-on-start="false"
                 use-foreign-keys="true"
                 join-style="ansi-no-parenthesis"
@@ -68,7 +189,7 @@ Mysql Version: > 5.6.4 (supports datetime milliseconds)
                 helper-class="org.apache.ofbiz.entity.datasource.GenericHelperDAO"
                 field-type-name="mysql"
                 check-on-start="true"
-                add-missing-on-start="true"
+                add-missing-on-start="false"
                 check-pks-on-start="false"
                 use-foreign-keys="true"
                 join-style="ansi-no-parenthesis"
@@ -102,7 +223,7 @@ Mysql Version: > 5.6.4 (supports datetime milliseconds)
                 helper-class="org.apache.ofbiz.entity.datasource.GenericHelperDAO"
                 field-type-name="mysql"
                 check-on-start="true"
-                add-missing-on-start="true"
+                add-missing-on-start="false"
                 check-pks-on-start="false"
                 use-foreign-keys="true"
                 join-style="ansi-no-parenthesis"
