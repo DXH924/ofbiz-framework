@@ -122,7 +122,7 @@
 * org.apache.ofbiz.entity中定义了和实体引擎实体数据交互的API
 * 对用户来说只需要理解3个类
   * GenericDelegator：经常以实例名"delegator"使用，主要用来对GenericValue对象进行创建、查询、存储和其他操作
-  * GenericValue：一旦GenericValue对象呗创建，它就会包含一个创建它的delegator的引用。通过这个引用就可以知道是如何存储、删除并且执行其他操作的，而无需程序调用委托者本身的方法
+  * GenericValue：一旦GenericValue对象被创建，它就会包含一个创建它的delegator的引用。通过这个引用就可以知道是如何存储、删除并且执行其他操作的，而无需程序调用委托者本身的方法
   * GenericPK
 * 应该使用GenericDelegator的makeValue和makePK方法来构造GenericValue和GenericPK，这些创建一个对象而不持久化它，并允许您添加到它，稍后使用它们自己的 create 或 store 方法创建或存储它，或者在delegator对象上调用 create 或 store 方法
 * Creating, Storing and Removing
@@ -132,3 +132,194 @@
   * 通过delegator或者GenericValue的remove方法删除实体
 * Finding
   * 可以使用 findByPrimaryKey 方法从数据库中检索值实例，或者可以使用 findAll 或 findByAnd 方法检索集合
+
+## 八、GenericDelegator
+
+* makeValue方法
+
+  * 功能：Creates a Entity in the form of a GenericValue without persisting it
+   * 实现：
+    ```java
+  public GenericValue makeValue(Element element) {
+          if (element == null) {
+              return null;
+          }
+          String entityName = element.getTagName();
+  
+          // if a dash or colon is in the tag name, grab what is after it
+          if (entityName.indexOf('-') > 0) {
+              entityName = entityName.substring(entityName.indexOf('-') + 1);
+          }
+          if (entityName.indexOf(':') > 0) {
+              entityName = entityName.substring(entityName.indexOf(':') + 1);
+          }
+          GenericValue value = this.makeValue(entityName);
+  
+          ModelEntity modelEntity = value.getModelEntity();
+  
+          Iterator<ModelField> modelFields = modelEntity.getFieldsIterator();
+  
+          while (modelFields.hasNext()) {
+              ModelField modelField = modelFields.next();
+              String name = modelField.getName();
+              String attr = element.getAttribute(name);
+  
+              if (UtilValidate.isNotEmpty(attr)) {
+                  // GenericEntity.makeXmlElement() sets null values to GenericEntity.NULL_FIELD.toString(), so look for
+                  //     that and treat it as null
+                  if (GenericEntity.NULL_FIELD.toString().equals(attr)) {
+                      value.set(name, null);
+                  } else {
+                      value.setString(name, attr);
+                  }
+              } else {
+                  // if no attribute try a subelement
+                  Element subElement = UtilXml.firstChildElement(element, name);
+  
+                  if (subElement != null) {
+                      value.setString(name, UtilXml.elementValue(subElement));
+                  }
+              }
+          }
+  
+          return value;
+      }
+    ```
+  
+* makePK方法
+
+  * 功能：Creates a Primary Key in the form of a GenericPK without persisting it
+  * 实现：
+  
+  ```java
+      public GenericPK makePK(String entityName, Map<String, ? extends Object> fields) {
+          ModelEntity entity = this.getModelEntity(entityName);
+          if (entity == null) {
+              throw new IllegalArgumentException("[GenericDelegator.makePK] could not find entity for entityName: " + entityName);
+          }
+          return GenericPK.create(this, entity, fields);
+      }
+  ```
+  
+* create方法
+
+  * 功能：Creates a Entity in the form of a GenericValue and write it to the datasource
+
+  * 实现：
+
+    ```java
+    public GenericValue create(GenericValue value) throws GenericEntityException {
+            boolean beganTransaction = false;
+            try {
+                if (ALWAYS_USE_TRANS) {
+                    beganTransaction = TransactionUtil.begin();
+                }
+    
+                if (value == null) {
+                    throw new GenericEntityException("Cannot create a null value");
+                }
+    
+                EntityEcaRuleRunner<?> ecaRunner = this.getEcaRuleRunner(value.getEntityName());
+                ecaRunner.evalRules(EntityEcaHandler.EV_VALIDATE, EntityEcaHandler.OP_CREATE, value, false);
+    
+                GenericHelper helper = getEntityHelper(value.getEntityName());
+    
+                ecaRunner.evalRules(EntityEcaHandler.EV_RUN, EntityEcaHandler.OP_CREATE, value, false);
+    
+                value.setDelegator(this);
+    
+                // if audit log on for any fields, save new value with no old value because it's a create
+                if (value.getModelEntity().getHasFieldWithAuditLog()) {
+                    createEntityAuditLogAll(value, false, false);
+                }
+    
+                value = helper.create(value);
+    
+                if (testMode) {
+                    storeForTestRollback(new TestOperation(OperationType.INSERT, value));
+                }
+                if (value != null) {
+                    value.setDelegator(this);
+                    if (value.lockEnabled()) {
+                        refresh(value);
+                    } else {
+                        // doCacheClear
+                        ecaRunner.evalRules(EntityEcaHandler.EV_CACHE_CLEAR, EntityEcaHandler.OP_CREATE, value, false);
+                        this.clearCacheLine(value);
+                    }
+                    ecaRunner.evalRules(EntityEcaHandler.EV_RETURN, EntityEcaHandler.OP_CREATE, value, false);
+                }
+    
+                TransactionUtil.commit(beganTransaction);
+                return value;
+            } catch (IllegalStateException | GenericEntityException e) {
+                String errMsg = "Failure in create operation for entity [" + (value != null ? value.getEntityName() : "value is null")
+                        + "]: " + e.toString() + ". Rolling back transaction.";
+                Debug.logError(errMsg, MODULE);
+                TransactionUtil.rollback(beganTransaction, errMsg, e);
+                throw new GenericEntityException(e);
+            }
+        }
+    ```
+
+    
+
+* store方法
+
+  * 功能：Store the Entity from the GenericValue to the persistent store
+
+  * 实现：
+
+    ```java
+    public int store(GenericValue value) throws GenericEntityException {
+            boolean beganTransaction = false;
+            try {
+                if (ALWAYS_USE_TRANS) {
+                    beganTransaction = TransactionUtil.begin();
+                }
+    
+                EntityEcaRuleRunner<?> ecaRunner = this.getEcaRuleRunner(value.getEntityName());
+                ecaRunner.evalRules(EntityEcaHandler.EV_VALIDATE, EntityEcaHandler.OP_STORE, value, false);
+                GenericHelper helper = getEntityHelper(value.getEntityName());
+    
+                ecaRunner.evalRules(EntityEcaHandler.EV_RUN, EntityEcaHandler.OP_STORE, value, false);
+    
+                // if audit log on for any fields, save old value before the update so we still have both
+                if (value.getModelEntity().getHasFieldWithAuditLog()) {
+                    createEntityAuditLogAll(value, true, false);
+                }
+    
+                GenericValue updatedEntity = null;
+    
+                if (testMode) {
+                    updatedEntity = this.findOne(value.getEntityName(), value.getPrimaryKey(), false);
+                }
+    
+                int retVal = helper.store(value);
+    
+                // doCacheClear
+                ecaRunner.evalRules(EntityEcaHandler.EV_CACHE_CLEAR, EntityEcaHandler.OP_STORE, value, false);
+                this.clearCacheLine(value);
+    
+                if (testMode) {
+                    storeForTestRollback(new TestOperation(OperationType.UPDATE, updatedEntity));
+                }
+                // refresh the valueObject to get the new version
+                if (value.lockEnabled()) {
+                    refresh(value);
+                }
+    
+                ecaRunner.evalRules(EntityEcaHandler.EV_RETURN, EntityEcaHandler.OP_STORE, value, false);
+                TransactionUtil.commit(beganTransaction);
+                return retVal;
+            } catch (IllegalStateException | GenericEntityException e) {
+                String errMsg = "Failure in store operation for entity [" + value.getEntityName() + "]: " + e.toString() + ". Rolling back transaction.";
+                Debug.logError(e, errMsg, MODULE);
+                TransactionUtil.rollback(beganTransaction, errMsg, e);
+                throw new GenericEntityException(e);
+            }
+        }
+    ```
+
+    
+
