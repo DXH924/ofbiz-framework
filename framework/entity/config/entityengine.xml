@@ -140,8 +140,8 @@ access. For a detailed description see the core/docs/entityconfig.html file.
         <read-data reader-name="ext-demo"/>
         <!-- beware use-indices-unique="false" is needed because of Derby bug with null values in a unique index -->
         <inline-jdbc
-                jdbc-driver="org.apache.derby.jdbc.EmbeddedDriver"
-                jdbc-uri="jdbc:derby:ofbiz;create=true"
+                jdbc-driver="org.apache.derby.jdbc.ClientDriver"
+                jdbc-uri="jdbc:derby://localhost:1527/ofbiz;create=true"
                 jdbc-username="ofbiz"
                 jdbc-password-lookup="derby-ofbiz"
                 isolation-level="ReadCommitted"
@@ -173,8 +173,8 @@ access. For a detailed description see the core/docs/entityconfig.html file.
         <read-data reader-name="ext-test"/>
         <read-data reader-name="ext-demo"/>
         <inline-jdbc
-                jdbc-driver="org.apache.derby.jdbc.EmbeddedDriver"
-                jdbc-uri="jdbc:derby:ofbizolap;create=true"
+                jdbc-driver="org.apache.derby.jdbc.ClientDriver"
+                jdbc-uri="jdbc:derby://localhost:1527/ofbizolap;create=true"
                 jdbc-username="ofbiz"
                 jdbc-password-lookup="derby-ofbizolap"
                 isolation-level="ReadCommitted"
@@ -203,8 +203,8 @@ access. For a detailed description see the core/docs/entityconfig.html file.
         <read-data reader-name="ext-demo"/>
         <!-- beware use-indices-unique="false" is needed because of Derby bug with null values in a unique index -->
         <inline-jdbc
-                jdbc-driver="org.apache.derby.jdbc.EmbeddedDriver"
-                jdbc-uri="jdbc:derby:ofbiztenant;create=true"
+                jdbc-driver="org.apache.derby.jdbc.ClientDriver"
+                jdbc-uri="jdbc:derby://localhost:1527/ofbiztenant;create=true"
                 jdbc-username="ofbiz"
                 jdbc-password-lookup="derby-ofbiztenant"
                 isolation-level="ReadCommitted"
