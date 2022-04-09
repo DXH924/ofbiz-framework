@@ -4,6 +4,107 @@
 ## Apache Derby数据库
 * OFBIZ自带的数据库是Apache Derby，是测试系统的数据库，适合开发和测试用，不适合生产环境
 * 在开发时使用Derby数据库
+* Derby数据库分为两种类型，一种是内嵌式Embedded，使用一个进程运行；另一种是网络模式，和MySQL的server-client一样
+* 在开发时最好选择网络模式，对应的jdbc-Driver为：org.apache.derby.jdbc.ClientDriver，jdbc-url为：jdbc:derby://{host}:{port}/{database};create=true，默认端口为1527
+* 如果选择网络模式，则需要单独运行derby的服务进程，%DERBY_HOME%\bin\startNetworkServer.bat
+* 网络模式的derby配置：
+```xml
+    <datasource name="localderby"
+                helper-class="org.apache.ofbiz.entity.datasource.GenericHelperDAO"
+                schema-name="OFBIZ"
+                field-type-name="derby"
+                check-on-start="true"
+                add-missing-on-start="true"
+                use-pk-constraint-names="false"
+                use-indices-unique="false"
+                alias-view-columns="false"
+                use-order-by-nulls="true"
+                offset-style="fetch">
+   <read-data reader-name="tenant"/>
+   <read-data reader-name="seed"/>
+   <read-data reader-name="seed-initial"/>
+   <read-data reader-name="demo"/>
+   <read-data reader-name="ext"/>
+   <read-data reader-name="ext-test"/>
+   <read-data reader-name="ext-demo"/>
+   <!-- beware use-indices-unique="false" is needed because of Derby bug with null values in a unique index -->
+   <inline-jdbc
+           jdbc-driver="org.apache.derby.jdbc.ClientDriver"
+           jdbc-uri="jdbc:derby://localhost:1527/ofbiz;create=true"
+           jdbc-username="ofbiz"
+           jdbc-password-lookup="derby-ofbiz"
+           isolation-level="ReadCommitted"
+           pool-minsize="2"
+           pool-maxsize="250"
+           test-on-borrow="true"
+           pool-jdbc-test-stmt="values 1"
+           soft-min-evictable-idle-time-millis="600000"
+           time-between-eviction-runs-millis="600000"/>
+   <!-- <jndi-jdbc jndi-server-name="localjndi" jndi-name="java:/DerbyDataSource" isolation-level="ReadCommitted"/> -->
+</datasource>
+
+<datasource name="localderbyolap"
+            helper-class="org.apache.ofbiz.entity.datasource.GenericHelperDAO"
+            schema-name="OFBIZ"
+            field-type-name="derby"
+            check-on-start="true"
+            add-missing-on-start="true"
+            use-pk-constraint-names="false"
+            use-indices-unique="false"
+            alias-view-columns="false"
+            use-order-by-nulls="true">
+<!-- beware use-indices-unique="false" is needed because of Derby bug with null values in a unique index -->
+<read-data reader-name="tenant"/>
+<read-data reader-name="seed"/>
+<read-data reader-name="seed-initial"/>
+<read-data reader-name="demo"/>
+<read-data reader-name="ext"/>
+<read-data reader-name="ext-test"/>
+<read-data reader-name="ext-demo"/>
+<inline-jdbc
+        jdbc-driver="org.apache.derby.jdbc.ClientDriver"
+        jdbc-uri="jdbc:derby://localhost:1527/ofbizolap;create=true"
+        jdbc-username="ofbiz"
+        jdbc-password-lookup="derby-ofbizolap"
+        isolation-level="ReadCommitted"
+        pool-minsize="2"
+        pool-maxsize="250"
+        time-between-eviction-runs-millis="600000"/>
+<!-- <jndi-jdbc jndi-server-name="localjndi" jndi-name="java:/DerbyDataSource" isolation-level="ReadCommitted"/> -->
+</datasource>
+
+<datasource name="localderbytenant"
+            helper-class="org.apache.ofbiz.entity.datasource.GenericHelperDAO"
+            schema-name="OFBIZ"
+            field-type-name="derby"
+            check-on-start="true"
+            add-missing-on-start="true"
+            use-pk-constraint-names="false"
+            use-indices-unique="false"
+            alias-view-columns="false"
+            use-order-by-nulls="true">
+<read-data reader-name="tenant"/>
+<read-data reader-name="seed"/>
+<read-data reader-name="seed-initial"/>
+<read-data reader-name="demo"/>
+<read-data reader-name="ext"/>
+<read-data reader-name="ext-test"/>
+<read-data reader-name="ext-demo"/>
+<!-- beware use-indices-unique="false" is needed because of Derby bug with null values in a unique index -->
+<inline-jdbc
+        jdbc-driver="org.apache.derby.jdbc.ClientDriver"
+        jdbc-uri="jdbc:derby://localhost:1527/ofbiztenant;create=true"
+        jdbc-username="ofbiz"
+        jdbc-password-lookup="derby-ofbiztenant"
+        isolation-level="ReadCommitted"
+        pool-minsize="2"
+        pool-maxsize="250"
+        time-between-eviction-runs-millis="600000"/>
+<!-- <jndi-jdbc jndi-server-name="localjndi" jndi-name="java:/DerbyDataSource" isolation-level="ReadCommitted"/> -->
+</datasource> 
+```
+
+* 内嵌模式的derby配置：
 ```xml
     <delegator name="default" entity-model-reader="main" entity-group-reader="main" entity-eca-reader="main" distributed-cache-clear-enabled="false">
         <group-map group-name="org.apache.ofbiz" datasource-name="localderby"/>
@@ -263,4 +364,4 @@ Mysql Version: > 5.6.4 (supports datetime milliseconds)
 
 2. 若Apache Derby数据库在再次启动ofbiz时报错：Caused by: org.apache.derby.iapi.error.StandardException: Another instance of Derby may have already booted the database %OFBIZ_HOME%\runtime\data\derby\ofbiz.
    
-   解决方案：打开任务管理器，结束任务“Open JDK Platform binary”
+   解决方案：打开任务管理器，结束任务“Open JDK Platform binary”，这种情况在使用内嵌式Derby数据库时出现，使用网络模式Derby还未遇见
