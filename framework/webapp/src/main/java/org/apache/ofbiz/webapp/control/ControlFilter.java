@@ -94,6 +94,11 @@ public class ControlFilter extends HttpFilter {
         }
     }
 
+    @Override
+    public void destroy() {
+
+    }
+
     /**
      * Converts {@code code} string to an integer.  If conversion fails, Return
      * {@code DEFAULT_HTTP_ERROR_STATUS} instead.
