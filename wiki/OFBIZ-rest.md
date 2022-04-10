@@ -3,6 +3,7 @@
 
 This initial implementation helps to expose existing or new OFBiz services as REST.
 To facilitate this, added a new "action" attribute to service elements that helps to determine how a particular service can be accessed via REST.
+* 如果要将接口暴露给Swagger，在<service>中设置export为"true"，并设置action为HTTP操作（GET, POST, PUT, DELETE...）
 
 ## Important URLs
 * API https://localhost:8443/rest
