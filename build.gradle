@@ -144,6 +144,7 @@ defaultTasks 'jar', 'test'
 
 allprojects {
     repositories{
+        mavenLocal()
         mavenCentral()
         // the switch from jCenter to mavenCentral needs some additional repositories to be configured here
         // this should be checked frequently to remove obsolete configurations if the artifacts are available
