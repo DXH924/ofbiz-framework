@@ -39,6 +39,7 @@ import org.apache.ofbiz.base.util.string.FlexibleStringExpander;
 import org.apache.ofbiz.entity.Delegator;
 import org.apache.ofbiz.entity.GenericEntityException;
 import org.apache.ofbiz.entity.GenericValue;
+import org.apache.ofbiz.entity.util.EntityQuery;
 import org.apache.ofbiz.entity.util.EntityUtilProperties;
 import org.apache.ofbiz.service.DispatchContext;
 import org.apache.ofbiz.service.ServiceUtil;
@@ -62,6 +63,12 @@ public class IcsPaymentServices {
         SSLUtil.loadJsseProperties();
     }
 
+    /**
+     * 信用卡授权
+     * @param dctx
+     * @param context
+     * @return
+     */
     public static Map<String, Object> ccAuth(DispatchContext dctx, Map<String, ? extends Object> context) {
         Delegator delegator = dctx.getDelegator();
         Locale locale = (Locale) context.get("locale");
@@ -72,8 +79,9 @@ public class IcsPaymentServices {
                     "AccountingCyberSourceErrorGettingPaymentGatewayConfig", locale));
         }
 
-        Map<String, Object> request = buildAuthRequest(context, delegator);
-        request.put("merchantID", props.get("merchantID"));
+        // Map<String, Object> request = buildAuthRequest(context, delegator);
+        Map<String, String> request = buildAuthRequest(context, delegator);
+        request.put("merchantID", (String)props.get("merchantID"));
 
         // transmit the request
         Map<String, Object> reply;
@@ -99,6 +107,12 @@ public class IcsPaymentServices {
         return ServiceUtil.returnSuccess();
     }
 
+    /**
+     * 捕获信用卡
+     * @param dctx
+     * @param context
+     * @return
+     */
     public static Map<String, Object> ccCapture(DispatchContext dctx, Map<String, ? extends Object> context) {
         Delegator delegator = dctx.getDelegator();
         GenericValue orderPaymentPreference = (GenericValue) context.get("orderPaymentPreference");
@@ -119,8 +133,8 @@ public class IcsPaymentServices {
                     "AccountingCyberSourceErrorGettingPaymentGatewayConfig", locale));
         }
 
-        Map<String, Object> request = buildCaptureRequest(context, authTransaction, delegator);
-        request.put("merchantID", props.get("merchantID"));
+        Map<String, String> request = buildCaptureRequest(context, authTransaction, delegator);
+        request.put("merchantID", (String)props.get("merchantID"));
 
         // transmit the request
         Map<String, Object> reply;
@@ -158,8 +172,8 @@ public class IcsPaymentServices {
                     "AccountingCyberSourceErrorGettingPaymentGatewayConfig", locale));
         }
 
-        Map<String, Object> request = buildReleaseRequest(context, authTransaction);
-        request.put("merchantID", props.get("merchantID"));
+        Map<String, String> request = buildReleaseRequest(context, authTransaction);
+        request.put("merchantID", (String)props.get("merchantID"));
 
         // transmit the request
         Map<String, Object> reply;
@@ -180,6 +194,12 @@ public class IcsPaymentServices {
         return result;
     }
 
+    /**
+     * 退款
+     * @param dctx
+     * @param context
+     * @return
+     */
     public static Map<String, Object> ccRefund(DispatchContext dctx, Map<String, ? extends Object> context) {
         Delegator delegator = dctx.getDelegator();
         GenericValue orderPaymentPreference = (GenericValue) context.get("orderPaymentPreference");
@@ -197,8 +217,8 @@ public class IcsPaymentServices {
                     "AccountingCyberSourceErrorGettingPaymentGatewayConfig", locale));
         }
 
-        Map<String, Object> request = buildRefundRequest(context, authTransaction, delegator);
-        request.put("merchantID", props.get("merchantID"));
+        Map<String, String> request = buildRefundRequest(context, authTransaction, delegator);
+        request.put("merchantID", (String)props.get("merchantID"));
 
         // transmit the request
         Map<String, Object> reply;
@@ -230,8 +250,8 @@ public class IcsPaymentServices {
                     "AccountingCyberSourceErrorGettingPaymentGatewayConfig", locale));
         }
 
-        Map<String, Object> request = buildCreditRequest(context);
-        request.put("merchantID", props.get("merchantID"));
+        Map<String, String> request = buildCreditRequest(context);
+        request.put("merchantID", (String)props.get("merchantID"));
 
         // transmit the request
         Map<String, Object> reply;
@@ -294,7 +314,7 @@ public class IcsPaymentServices {
         return props;
     }
 
-    private static Map<String, Object> buildAuthRequest(Map<String, ? extends Object> context, Delegator delegator) {
+    private static Map<String, String> buildAuthRequest(Map<String, ? extends Object> context, Delegator delegator) {
         String paymentGatewayConfigId = (String) context.get("paymentGatewayConfigId");
         String configString = (String) context.get("paymentConfig");
         String currency = (String) context.get("currency");
@@ -304,7 +324,7 @@ public class IcsPaymentServices {
         // make the request map
         String capture = getPaymentGatewayConfigValue(delegator, paymentGatewayConfigId, "autoBill", configString, "payment.cybersource.autoBill", "false");
         String orderId = (String) context.get("orderId");
-        Map<String, Object> request = new HashMap<>();
+        Map<String, String> request = new HashMap<>();
         request.put("ccAuthService_run", "true");              // run auth service
         request.put("ccCaptureService_run", capture);          // run capture service (i.e. sale)
         request.put("merchantReferenceCode", orderId);         // set the order ref number
@@ -315,7 +335,7 @@ public class IcsPaymentServices {
         return request;
     }
 
-    private static Map<String, Object> buildCaptureRequest(Map<String, ? extends Object> context, GenericValue authTransaction, Delegator delegator) {
+    private static Map<String, String> buildCaptureRequest(Map<String, ? extends Object> context, GenericValue authTransaction, Delegator delegator) {
         GenericValue orderPaymentPreference = (GenericValue) context.get("orderPaymentPreference");
         String paymentGatewayConfigId = (String) context.get("paymentGatewayConfigId");
         String configString = (String) context.get("paymentConfig");
@@ -325,7 +345,7 @@ public class IcsPaymentServices {
         }
         String merchantDesc = getPaymentGatewayConfigValue(delegator, paymentGatewayConfigId, "merchantDescr", configString, "payment.cybersource.merchantDescr", null);
         String merchantCont = getPaymentGatewayConfigValue(delegator, paymentGatewayConfigId, "merchantContact", configString, "payment.cybersource.merchantContact", null);
-        Map<String, Object> request = new HashMap<>();
+        Map<String, String> request = new HashMap<>();
         request.put("ccCaptureService_run", "true");
         request.put("ccCaptureService_authRequestID", authTransaction.getString("referenceNum"));
         request.put("item_0_unitPrice", getAmountString(context, "captureAmount"));
@@ -342,8 +362,8 @@ public class IcsPaymentServices {
         return request;
     }
 
-    private static Map<String, Object> buildReleaseRequest(Map<String, ? extends Object> context, GenericValue authTransaction) {
-        Map<String, Object> request = new HashMap<>();
+    private static Map<String, String> buildReleaseRequest(Map<String, ? extends Object> context, GenericValue authTransaction) {
+        Map<String, String> request = new HashMap<>();
         GenericValue orderPaymentPreference = (GenericValue) context.get("orderPaymentPreference");
         String currency = (String) context.get("currency");
         request.put("ccAuthReversalService_run", "true");
@@ -354,7 +374,7 @@ public class IcsPaymentServices {
         return request;
     }
 
-    private static Map<String, Object> buildRefundRequest(Map<String, ? extends Object> context, GenericValue authTransaction, Delegator delegator) {
+    private static Map<String, String> buildRefundRequest(Map<String, ? extends Object> context, GenericValue authTransaction, Delegator delegator) {
         GenericValue orderPaymentPreference = (GenericValue) context.get("orderPaymentPreference");
         String paymentGatewayConfigId = (String) context.get("paymentGatewayConfigId");
         String configString = (String) context.get("paymentConfig");
@@ -364,7 +384,7 @@ public class IcsPaymentServices {
         String currency = (String) context.get("currency");
         String merchantDesc = getPaymentGatewayConfigValue(delegator, paymentGatewayConfigId, "merchantDescr", configString, "payment.cybersource.merchantDescr", null);
         String merchantCont = getPaymentGatewayConfigValue(delegator, paymentGatewayConfigId, "merchantContact", configString, "payment.cybersource.merchantContact", null);
-        Map<String, Object> request = new HashMap<>();
+        Map<String, String> request = new HashMap<>();
         request.put("ccCreditService_run", "true");
         request.put("ccCreditService_captureRequestID", authTransaction.getString("referenceNum"));
         request.put("item_0_unitPrice", getAmountString(context, "refundAmount"));
@@ -379,9 +399,9 @@ public class IcsPaymentServices {
         return request;
     }
 
-    private static Map<String, Object> buildCreditRequest(Map<String, ? extends Object> context) {
+    private static Map<String, String> buildCreditRequest(Map<String, ? extends Object> context) {
         String refCode = (String) context.get("referenceCode");
-        Map<String, Object> request = new HashMap<>();
+        Map<String, String> request = new HashMap<>();
         request.put("ccCreditService_run", "true");            // run credit service
         request.put("merchantReferenceCode", refCode);         // set the ref number could be order id
         appendFullBillingInfo(request, context);               // add in all address info
@@ -389,7 +409,7 @@ public class IcsPaymentServices {
         return request;
     }
 
-    private static void appendAvsRules(Map<String, Object> request, Map<String, ? extends Object> context, Delegator delegator) {
+    private static void appendAvsRules(Map<String, String> request, Map<String, ? extends Object> context, Delegator delegator) {
         String paymentGatewayConfigId = (String) context.get("paymentGatewayConfigId");
         String configString = (String) context.get("paymentConfig");
         if (configString == null) {
@@ -419,7 +439,7 @@ public class IcsPaymentServices {
         request.put("businessRules_ignoreAVS", avsIgnore);
     }
 
-    private static void appendFullBillingInfo(Map<String, Object> request, Map<String, ? extends Object> context) {
+    private static void appendFullBillingInfo(Map<String, String> request, Map<String, ? extends Object> context) {
         // contact info
         GenericValue email = (GenericValue) context.get("billToEmail");
         if (email != null) {
@@ -488,7 +508,7 @@ public class IcsPaymentServices {
         }
     }
 
-    private static void appendItemLineInfo(Map<String, Object> request, Map<String, ? extends Object> context, String amountField) {
+    private static void appendItemLineInfo(Map<String, String> request, Map<String, ? extends Object> context, String amountField) {
         // send over a line item total offer w/ the total for billing; don't trust CyberSource for calc
         String currency = (String) context.get("currency");
         int lineNumber = 0;
