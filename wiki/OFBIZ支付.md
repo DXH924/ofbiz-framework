@@ -110,7 +110,7 @@
     testCCProcessorWithCapture
     ```
   
-  * 以下services可以被用于Capture Service中：
+  以下services可以被用于Capture Service中：
   
     ```
     testCCCaptureWithReAuth - this one actually calls PaymentGatewayServices.getAuthTransaction
@@ -123,8 +123,6 @@
     alwaysBadCardNumberCCProcessor
     alwaysFailCCProcessor
     ```
-  
-    
   
 * PaymentMethodServices
 
@@ -141,7 +139,6 @@
   ```
 
 * PaymentGatewayServices
-
   ```
   authOrderPaymentPreference(DispatchContext, Map)
   authOrderPayments(DispatchContext, Map)
@@ -202,9 +199,7 @@
   testRefund(DispatchContext, Map)
   testRefundFailure(DispatchContext, Map)
   ```
-
   
-
 ## Store Payment Settings
 * 此页面用于配置OFBIZ中各种付款方式类型的付款处理设置
 * 在demo数据中，可以看到为所有支付方式配置了测试服务，包括Credit Card, Electronic Funds Transfer (EFT), PayPal, WorldPay, and Gift Cards
