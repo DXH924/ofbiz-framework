@@ -1,5 +1,11 @@
 # OBFIZ支付
 
+## 实体定义路径
+
+```
+ofbiz-framework/applications/datamodel/entitydef/accounting-entitymodel.xml
+```
+
 ## 涉及的数据库表
 
 * ORDER_PAYMENT_PREFERENCE： 存储了一个订单的支付信息 

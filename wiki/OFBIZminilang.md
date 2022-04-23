@@ -30,7 +30,9 @@ https://cwiki.apache.org/confluence/display/OFBIZ/Mini+Language+-+minilang+-+sim
    </service>
   ```
 
-  
+* 在mini-lang里面你可以调用Simple Map Processor， Services和bsh脚本，执行于实体相关的操作，并创建消息返回给调用者
+
+* 当simple-method启动时， 方法环境中存在许多对象，或者在执行时使用这些对象来跟踪某些信息。 有些会在作为事件或服务调用时存在，这些在以下列表中进行了标记。 可以使用 simple-method 标记上的属性覆盖每个名称。 下面列出了默认值（您也可以在 DTD 中找到它们）。 
 
 
 
